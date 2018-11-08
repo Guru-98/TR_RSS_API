@@ -6,6 +6,7 @@ Created on Sun Oct  7 12:40:50 2018
 @author: guru
 """
 
+from multiprocessing import Pool
 from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 import re
@@ -39,18 +40,17 @@ def insertMovie(_name, _post_name, _mag_link):
     executeSql('''INSERT INTO movies VALUES ('%s', '%s', '%s')'''
                %(_name, _post_name, _mag_link))
 
-def fetchAllMagLinks():
-    for _nm in nms:
-        nm = BeautifulSoup(_nm,'lxml')
-        name = nm.text.split(' - [')[0]
-        anchors = nm.find_all('a')
+def fetchMagLinks(_nm):
+    nm = BeautifulSoup(_nm,'lxml')
+    name = nm.text.split(' - [')[0]
+    anchors = nm.find_all('a')
 
-        for post in anchors:
-            post_name = post.text
-            post_url = post.attrs['href']
-            mag_link = getMagLink(post_url)
-            if mag_link:
-                insertMovie(name, post_name, mag_link)
+    for post in anchors:
+        post_name = post.text
+        post_url = post.attrs['href']
+        mag_link = getMagLink(post_url)
+        if mag_link:
+            insertMovie(name, post_name, mag_link)
 
 soup = getSoupFromLink(url)
 
@@ -63,5 +63,6 @@ tnm = tnmheader.find_next("strong")
 
 nms = str(tnm).split("<br/>")
 
-fetchAllMagLinks()
+pool = Pool(processes=4)
+results = pool.map(fetchMagLinks, nms)
 conn.close()
